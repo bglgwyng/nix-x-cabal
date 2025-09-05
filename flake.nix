@@ -33,70 +33,82 @@
         packages-from-plan-json =
           { pkgs, plan-json, haskellPackages ? pkgs.haskellPackages }:
           let
+            inherit (pkgs) lib haskell;
             install-plan = plan-json.install-plan;
-            configureds =
+            components =
               builtins.filter
-                (
-                  pkg:
-                  let
-                    x = pkg.type == "configured"
-                      && (pkg.pkg-src.type == "repo-tar" || pkg.pkg-src.type == "source-repo")
-                      # TODO: exclusive?
-                      # "lib(:.*)?"
-                      && (!(pkg ? "component-name") || (builtins.match "^lib$" pkg.component-name != null))
-                      && (!(pkgs ? "components") || pkg.components ? "lib");
-                  in
-                  # builtins.trace
-                    #   (builtins.toJSON [
-                    #     pkg.pkg-name
-                    #     (pkgs ? "component-name")
-                    #     # ) || builtins.trace pkg (builtins.match "lib(:.*)?" pkg.component-name != null))
-                    #     # (!(pkgs ? "components") || pkgs.components ? "lib")
-                    #   ])
-                  x
-                )
+                (pkg: pkg.type == "configured" && (pkg.pkg-src.type == "repo-tar" || pkg.pkg-src.type == "source-repo"))
                 install-plan;
-            srcs = builtins.listToAttrs (builtins.map (plan: pkgs.callPackage ./plan-to-source.nix { inherit plan; }) configureds);
-            packages-by-id =
-              # builtins.trace (builtins.toJSON (builtins.map (plan: plan.pkg-name) configureds))
-              (builtins.listToAttrs
-                (builtins.map
-                  (plan:
-                    let src = pkgs.callPackage ./plan-to-source.nix { inherit plan; }; in
-                    {
-                      name = plan.id;
-                      value = { inherit src plan; };
-                    })
-                  configureds));
-            extract-depens = plan:
-              (if plan ? "depends" then plan.depends else [ ])
-              ++ (if plan ? "components" then plan.components.lib.depends else [ ]);
-            override-haskell-packages-in-plan = (name: value:
-              let inherit (value) plan src;
-                xs = builtins.listToAttrs (
-                  builtins.map
-                    (id: { name = packages-by-id.${id}.plan.pkg-name; value = overided-packages-by-id.${id}; })
-                    (builtins.filter
-                      (id: packages-by-id ? "${id}")
-                      (extract-depens plan)));
+            components-by-id = builtins.listToAttrs (builtins.map (plan: { name = plan.id; value = plan; }) components);
+            packages =
+              builtins.mapAttrs
+                (name: components:
+                  let
+                    the-component = builtins.head components;
+                    all-equal = xs:
+                      let first = builtins.head xs;
+                      in builtins.all (x: x == first) (builtins.tail xs);
+                  in
+                  assert all-equal (builtins.map (plan: plan.pkg-src-sha256) components);
+                  assert all-equal (builtins.map (plan: plan.pkg-cabal-sha256) components);
+                  {
+                    src = pkgs.callPackage ./plan-to-source.nix { plan = the-component; };
+                    components = components;
+                  })
+                (builtins.groupBy (plan: plan.pkg-name) components);
+            extract-depends = components:
+              let self-component-ids = builtins.map (plan: plan.id) components;
               in
-              # (haskellPackages.callCabal2nix plan.pkg-name src { }).override { }
-                # builtins.trace name (builtins.trace (extract-depens plan) (builtins.trace xs 
-                # (
-              pkgs.haskell.lib.dontHaddock
-                (pkgs.haskell.lib.dontCheck
-                  ((haskellPackages.callCabal2nix plan.pkg-name src { }).override (
-                    xs
-                  )))
-              # )))
-            );
-            overided-packages-by-id =
+              # for example, constraints-extras:exe:readme depends on constraints-extras:lib. this filter removes it.
+              builtins.filter (id: !builtins.elem id self-component-ids)
+                (builtins.concatMap
+                  # TODO: check if ignoring `exe-depends` is ok
+                  (component:
+                    (component.depends or [ ])
+                    ++ (if component ? "components" then
+                      builtins.concatMap (component: (component.depends or [ ])) (builtins.attrValues component.components)
+                    else [ ])
+                  )
+                  components);
+            extract-build-targets = components:
+              (builtins.concatMap
+                (component:
+                  builtins.map
+                    (component-name: if component-name == "lib" then "lib:${component.pkg-name}" else component-name)
+                    (if component ? "component-name" then
+                      [ component.component-name ]
+                    else
+                      assert component ? "components";
+                      builtins.attrNames component.components)
+                )
+                components);
+            override-haskell-packages-in-plan = name: package:
+              let
+                inherit (package) components src;
+                the-component = builtins.head components;
+                overrides =
+                  lib.pipe components
+                    [
+                      extract-depends
+                      (builtins.concatMap (id: if components-by-id ? "${id}" then [ components-by-id.${id}.pkg-name ] else [ ]))
+                      lib.unique
+                      (builtins.map (name: { name = name; value = overrided-packages.${name}; }))
+                      builtins.listToAttrs
+                    ];
+              in
+              lib.pipe
+                (haskellPackages.callCabal2nix name src { })
+                [
+                  (drv: drv.override overrides)
+                  haskell.lib.dontCheck
+                  (haskell.lib.compose.setBuildTargets (extract-build-targets components))
+                ];
+            overrided-packages =
               builtins.mapAttrs
                 override-haskell-packages-in-plan
-                packages-by-id;
+                packages;
           in
-          overided-packages-by-id;
-        # builtins.mapAttrs (name: src: (haskellPackages.callCabal2nix name src.source { }).override { }) srcs;
+          overrided-packages;
       };
     };
 }
