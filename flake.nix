@@ -24,7 +24,10 @@
 
           apps.generate-plan-json = {
             type = "app";
-            program = import ./generate-plan-json.nix { inherit pkgs; };
+            program = import ./generate-plan-json.nix {
+              inherit pkgs;
+              project-dir = ./.;
+            };
           };
         };
       flake = {
