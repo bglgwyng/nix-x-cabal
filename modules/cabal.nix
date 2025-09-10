@@ -21,11 +21,7 @@ types.submoduleWith {
         repositories = mkOption {
           type = types.attrsOf repository;
           description = "Repository configurations";
-          default = {
-            "hackage.haskell.org" = {
-              url = "http://hackage.haskell.org/";
-            };
-          };
+          default = { };
         };
         extra-cabal-config = mkOption {
           type = types.str;
