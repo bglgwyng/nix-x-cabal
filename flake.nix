@@ -26,9 +26,6 @@
         };
       flake = {
         flakeModule = import ./flakeModule.nix;
-        generate-plan-json = import ./generate-plan-json.nix;
-        packages-from-plan-json = import ./packages-from-plan-json.nix;
-
       };
     };
 }
