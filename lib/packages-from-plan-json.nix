@@ -2,27 +2,32 @@
 let
   inherit (pkgs) lib haskell;
   install-plan = plan-json.install-plan;
-  components =
-    builtins.filter
-      (pkg: pkg.type == "configured" && (pkg.pkg-src.type == "repo-tar" || pkg.pkg-src.type == "source-repo"))
-      install-plan;
-  components-by-id = builtins.listToAttrs (builtins.map (plan: { name = plan.id; value = plan; }) components);
-  packages =
-    builtins.mapAttrs
-      (name: components:
-        let
-          the-component = builtins.head components;
-          all-equal = xs:
-            let first = builtins.head xs;
-            in builtins.all (x: x == first) (builtins.tail xs);
-        in
-        assert all-equal (builtins.map (plan: plan.pkg-src-sha256) components);
-        assert all-equal (builtins.map (plan: plan.pkg-cabal-sha256) components);
-        {
-          src = pkgs.callPackage ./plan-to-source.nix { plan = the-component; };
-          components = components;
-        })
-      (builtins.groupBy (plan: plan.pkg-name) components);
+  configured-components = builtins.filter (pkg: pkg.type == "configured") install-plan;
+  components-by-id = builtins.listToAttrs (builtins.map (plan: { name = plan.id; value = plan; }) configured-components);
+  package-srcs = builtins.mapAttrs
+    (name: components:
+      let
+        the-component = builtins.head components;
+        all-equal = xs:
+          let first = builtins.head xs;
+          in builtins.all (x: x == first) (builtins.tail xs);
+        inherit (the-component) pkg-src;
+      in
+      assert (
+        if pkg-src.type == "repo-tar" || pkg-src.type == "source-repo" then
+          all-equal (builtins.map (plan: plan.pkg-src-sha256) components)
+          && all-equal (builtins.map (plan: plan.pkg-cabal-sha256) components)
+        else
+          assert pkg-src.type == "local";
+          all-equal (builtins.map (plan: pkg-src.path) components)
+      );
+      {
+        src = pkgs.callPackage ./plan-to-source.nix { plan = the-component; };
+        is-local = the-component.style == "local";
+        components = components;
+      }
+    )
+    (builtins.groupBy (plan: plan.pkg-name) configured-components);
   extract-depends = components:
     let self-component-ids = builtins.map (plan: plan.id) components;
     in
@@ -73,6 +78,10 @@ let
   overrided-packages =
     builtins.mapAttrs
       override-haskell-packages-in-plan
-      packages;
+      package-srcs;
+  global-packages = lib.filterAttrs (name: _: !package-srcs.${name}.is-local) overrided-packages;
+  local-packages = lib.filterAttrs (name: _: package-srcs.${name}.is-local) overrided-packages;
 in
-overrided-packages
+{
+  inherit global-packages local-packages;
+}

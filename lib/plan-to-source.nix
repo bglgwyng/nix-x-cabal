@@ -33,8 +33,7 @@ if pkg-src.type == "repo-tar" then
     '';
     dontBuild = true;
   }
-else
-  assert pkg-src.type == "source-repo";
+else if pkg-src.type == "source-repo" then
   assert pkg-src.source-repo ? "tag";
   let
     src =
@@ -45,3 +44,6 @@ else
         };
   in
   if pkg-src.source-repo ? "subdir" then "${src}/${pkg-src.source-repo.subdir}" else src
+else
+  assert pkg-src.type == "local";
+  /. + pkg-src.path

@@ -25,14 +25,19 @@ types.submoduleWith {
           description = "App to generate plan.json for this project";
           readOnly = true;
         };
-        configured-packages = mkOption {
+        packages = mkOption {
           type = types.lazyAttrsOf types.raw;
           description = "Packages configured from plan.json";
           readOnly = true;
         };
-        ghc-with-packages = mkOption {
-          type = types.package;
-          description = "GHC with packages to use";
+        global-packages = mkOption {
+          type = types.lazyAttrsOf types.raw;
+          description = "Global Packages configured from plan.json";
+          readOnly = true;
+        };
+        local-packages = mkOption {
+          type = types.lazyAttrsOf types.raw;
+          description = "Local Packages configured from plan.json";
           readOnly = true;
         };
         plan-json = mkOption {
@@ -59,40 +64,46 @@ types.submoduleWith {
         };
       };
     }
-    ({ config, ... }: {
-      config = {
-        cabal-dir = pkgs.callPackage ../lib/generate-cabal-dir.nix {
-          cabal-config = config.cabal-config;
-          sha256 = config.cabal-dir-sha256;
-        };
-        plan-json = pkgs.stdenv.mkDerivation {
-          name = "plan.json";
-          src = config.root;
-          buildInputs = [ config.haskellPackages.cabal-install config.haskellPackages.ghc ];
-          buildCommand = ''
-            export CABAL_CONFIG=${config.cabal-config}
-            export CABAL_DIR=${config.cabal-dir}
-            
-            MYTMP="$(mktemp -d)"
-            trap 'rm -rf -- "$MYTMP"' EXIT
-
-            cabal build all \
-              --project-dir=$src \
-              --dry-run \
-              --builddir=$MYTMP \
-              --with-compiler=ghc
-
-            cp $MYTMP/cache/plan.json $out
-          '';
-        };
-        configured-packages = import ../lib/packages-from-plan-json.nix {
+    ({ config, ... }:
+      let
+        packages = import ../lib/packages-from-plan-json.nix {
           inherit pkgs;
           haskellPackages = config.haskellPackages;
           # TODO: remove `unsafeDiscardStringContext`
           plan-json = builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile config.plan-json));
         };
-        ghc = config.haskellPackages.ghcWithPackages (_: builtins.attrValues config.configured-packages);
-      };
-    })
+      in
+      {
+        config = {
+          cabal-dir = pkgs.callPackage ../lib/generate-cabal-dir.nix {
+            cabal-config = config.cabal-config;
+            sha256 = config.cabal-dir-sha256;
+          };
+          plan-json = pkgs.stdenv.mkDerivation {
+            name = "plan.json";
+            src = config.root;
+            buildInputs = [ config.haskellPackages.cabal-install config.haskellPackages.ghc ];
+            buildCommand = ''
+              export CABAL_CONFIG=${config.cabal-config}
+              export CABAL_DIR=${config.cabal-dir}
+            
+              MYTMP="$(mktemp -d)"
+              trap 'rm -rf -- "$MYTMP"' EXIT
+
+              cabal build all \
+                --project-dir=$src \
+                --dry-run \
+                --builddir=$MYTMP \
+                --with-compiler=ghc
+
+              cp $MYTMP/cache/plan.json $out
+            '';
+          };
+          packages = packages.global-packages // packages.local-packages;
+          global-packages = packages.global-packages;
+          local-packages = packages.local-packages;
+          ghc = config.haskellPackages.ghcWithPackages (_: builtins.attrValues config.global-packages);
+        };
+      })
   ];
 }
