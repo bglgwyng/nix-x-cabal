@@ -1,6 +1,7 @@
 { lib, pkgs }:
 let
   inherit (lib) mkOption types;
+  local-package = import ./local-package.nix { inherit lib; };
 in
 types.submodule ({ config, ... }: {
   options = {
@@ -14,7 +15,7 @@ types.submodule ({ config, ... }: {
       default = null;
     };
     packages = mkOption {
-      type = types.nullOr (types.listOf (types.raw));
+      type = types.nullOr (types.listOf local-package);
       description = "Packages or paths for local no-index repository.";
       default = null;
     };
