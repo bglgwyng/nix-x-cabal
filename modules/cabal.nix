@@ -58,13 +58,10 @@ types.submoduleWith {
         };
         cabal-config = pkgs.writeText "cabal-config" (
           lib.concatStringsSep "\n" (
-            (lib.mapAttrsToList
-              (name: repo: ''
-                repository ${name}
-                ${lib.concatMapStringsSep "\n" (line: "  " + line) (lib.splitString "\n" (generate-repository { inherit pkgs lib; repository = repo; }))}
-              '')
+            lib.mapAttrsToList
+              (name: repostory: generate-repository { inherit pkgs lib repository; })
               config.repositories
-            ) ++ [ "with-compiler: ${config.ghc}/bin/ghc" ]
+            ++ [ "with-compiler: ${config.ghc}/bin/ghc" ]
             ++ (lib.optional (config.extra-cabal-config != "") config.extra-cabal-config)
           )
         );
