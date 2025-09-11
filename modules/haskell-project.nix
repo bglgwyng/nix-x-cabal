@@ -56,8 +56,12 @@ types.submoduleWith {
         packages = import ../lib/packages-from-plan-json.nix {
           inherit pkgs;
           haskellPackages = config.haskellPackages;
-          # TODO: remove `unsafeDiscardStringContext`
-          plan-json = builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile config.plan-json));
+          # Read plan.json with proper dependency tracking
+          plan-json = builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile (config.plan-json)));
+          # `get-local-package-deps` is used to recover the dependencies of local packages that lost their dependencies via `unsafeDiscardStringContext`
+          # `cabal-install` depends on local repositories, so that letting local packages depends on `cabal-install` is enough
+          # TODO: let each local package depends on the exact package source derivation
+          get-local-package-deps = (name: version: [ config.cabal-install ]);
         };
       in
       {

@@ -1,7 +1,7 @@
 { lib, pkgs }:
 let
   inherit (lib) mkOption types;
-  repository = import ./repository.nix { inherit lib; };
+  repository = import ./repository.nix { inherit lib pkgs; };
 in
 types.submoduleWith {
   modules = [
@@ -60,7 +60,7 @@ types.submoduleWith {
             (lib.mapAttrsToList
               (name: repo: ''
                 repository ${name}
-                  url: ${repo.url}
+                ${lib.concatMapStringsSep "\n" (line: "  " + line) (lib.splitString "\n" repo.text)}
               '')
               config.repositories
             ) ++ [ "with-compiler: ${config.ghc}/bin/ghc" ]

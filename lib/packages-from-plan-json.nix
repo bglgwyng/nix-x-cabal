@@ -1,4 +1,4 @@
-{ pkgs, plan-json, haskellPackages ? pkgs.haskellPackages }:
+{ pkgs, plan-json, haskellPackages ? pkgs.haskellPackages, get-local-package-deps }:
 let
   inherit (pkgs) lib haskell;
   install-plan = plan-json.install-plan;
@@ -14,7 +14,7 @@ let
         inherit (the-component) pkg-src;
       in
       assert (
-        if pkg-src.type == "repo-tar" || pkg-src.type == "source-repo" then
+        if pkg-src.type == "repo-tar" then
           all-equal (builtins.map (plan: plan.pkg-src-sha256) components)
           && all-equal (builtins.map (plan: plan.pkg-cabal-sha256) components)
         else
@@ -22,7 +22,10 @@ let
           all-equal (builtins.map (plan: pkg-src.path) components)
       );
       {
-        src = pkgs.callPackage ./plan-to-source.nix { plan = the-component; };
+        src = pkgs.callPackage ./plan-to-source.nix {
+          plan = the-component;
+          inherit get-local-package-deps;
+        };
         is-local = the-component.style == "local";
         components = components;
       }
@@ -39,7 +42,8 @@ let
           (component.depends or [ ])
           ++ (if component ? "components" then
             builtins.concatMap (component: (component.depends or [ ])) (builtins.attrValues component.components)
-          else [ ])
+          else [ ]
+          )
         )
         components);
   extract-build-targets = components:
@@ -51,22 +55,21 @@ let
             [ component.component-name ]
           else
             assert component ? "components";
-            builtins.attrNames component.components)
+            builtins.filter (name: name != "setup") (builtins.attrNames component.components))
       )
       components);
   override-haskell-packages-in-plan = name: package:
     let
       inherit (package) components src;
       the-component = builtins.head components;
-      overrides =
-        lib.pipe components
-          [
-            extract-depends
-            (builtins.concatMap (id: if components-by-id ? "${id}" then [ components-by-id.${id}.pkg-name ] else [ ]))
-            lib.unique
-            (builtins.map (name: { name = name; value = overrided-packages.${name}; }))
-            builtins.listToAttrs
-          ];
+      overrides = lib.pipe components
+        [
+          extract-depends
+          (builtins.concatMap (id: if components-by-id ? "${id}" then [ components-by-id.${id}.pkg-name ] else [ ]))
+          lib.unique
+          (builtins.map (name: { name = name; value = overrided-packages.${name}; }))
+          builtins.listToAttrs
+        ];
     in
     lib.pipe
       ((haskellPackages.callCabal2nix name src overrides))
@@ -74,13 +77,8 @@ let
         haskell.lib.dontCheck
         (haskell.lib.compose.setBuildTargets (extract-build-targets components))
       ];
-  overrided-packages =
-    builtins.mapAttrs
-      override-haskell-packages-in-plan
-      package-srcs;
+  overrided-packages = builtins.mapAttrs override-haskell-packages-in-plan package-srcs;
   global-packages = lib.filterAttrs (name: _: !package-srcs.${name}.is-local) overrided-packages;
   local-packages = lib.filterAttrs (name: _: package-srcs.${name}.is-local) overrided-packages;
 in
-{
-  inherit global-packages local-packages;
-}
+{ inherit global-packages local-packages; }
