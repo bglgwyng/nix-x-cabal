@@ -2,6 +2,7 @@
 let
   inherit (lib) mkOption types;
   repository = import ./repository.nix { inherit lib pkgs; };
+  generate-repository = import ../lib/generate-repository.nix;
 in
 types.submoduleWith {
   modules = [
@@ -60,7 +61,7 @@ types.submoduleWith {
             (lib.mapAttrsToList
               (name: repo: ''
                 repository ${name}
-                ${lib.concatMapStringsSep "\n" (line: "  " + line) (lib.splitString "\n" repo.text)}
+                ${lib.concatMapStringsSep "\n" (line: "  " + line) (lib.splitString "\n" (generate-repository { inherit pkgs lib; repository = repo; }))}
               '')
               config.repositories
             ) ++ [ "with-compiler: ${config.ghc}/bin/ghc" ]
