@@ -69,9 +69,8 @@ let
           ];
     in
     lib.pipe
-      (haskellPackages.callCabal2nix name src { })
+      ((haskellPackages.callCabal2nix name src overrides))
       [
-        (drv: drv.override overrides)
         haskell.lib.dontCheck
         (haskell.lib.compose.setBuildTargets (extract-build-targets components))
       ];
