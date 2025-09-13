@@ -1,7 +1,6 @@
 { lib, pkgs }:
 let
   inherit (lib) mkOption types;
-  local-package = import ./local-package.nix { inherit lib; };
 in
 types.submodule ({ config, ... }: {
   options = {
