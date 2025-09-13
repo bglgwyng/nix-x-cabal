@@ -5,10 +5,6 @@ let
 in
 types.submodule ({ config, ... }: {
   options = {
-    name = mkOption {
-      type = types.str;
-      description = "Repository name";
-    };
     # For remote repository
     url = mkOption {
       type = types.nullOr types.str;

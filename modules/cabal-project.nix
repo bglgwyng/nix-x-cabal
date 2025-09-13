@@ -76,8 +76,9 @@ types.submoduleWith {
     }
     ({ config, ... }:
       let
-        secure-remote-repositories = (builtins.filter (repository: repository.url != null) (builtins.attrValues config.repositories));
-        noindex-repositories = (builtins.filter (repository: repository.packages != null) (builtins.attrValues config.repositories));
+        named-repositories = lib.mapAttrsToList (name: repository: repository // { inherit name; }) config.repositories;
+        secure-remote-repositories = builtins.filter (repository: repository.url != null) named-repositories;
+        noindex-repositories = builtins.filter (repository: repository.packages != null) named-repositories;
         packages = import ../lib/packages-from-plan-json.nix {
           inherit pkgs;
           haskellPackages = config.haskellPackages;
