@@ -2,7 +2,7 @@
 let
   inherit (lib) mkOption types;
   repository = import ./repository.nix { inherit lib pkgs; };
-  generate-noindex-repository = import ../lib/generate-noindex-repository.nix { inherit pkgs lib generate-noindex-cache; };
+  make-noindex-repository = import ../lib/make-noindex-repository.nix { inherit pkgs lib generate-noindex-cache; };
 in
 types.submoduleWith {
   modules = [
@@ -92,8 +92,8 @@ types.submoduleWith {
       in
       {
         config = {
-          cabal-dir = pkgs.callPackage ../lib/generate-cabal-dir.nix {
-            inherit secure-remote-repositories generate-secure-repo-index-cache;
+          cabal-dir = pkgs.callPackage ../lib/make-cabal-dir.nix {
+            inherit secure-remote-repositories; make-secure-repo-index-cache = generate-secure-repo-index-cache;
           };
           cabal-config = pkgs.writeText "cabal-config" (
             lib.concatStringsSep "\n" (
@@ -107,7 +107,7 @@ types.submoduleWith {
               map
                 (repository: ''
                   repository ${repository.name}
-                    url: file+noindex://${generate-noindex-repository repository}
+                    url: file+noindex://${make-noindex-repository repository}
                 '')
                 noindex-repositories
               ++ [ "with-compiler: ${config.haskellPackages.ghc}/bin/ghc" ]
