@@ -9,6 +9,7 @@ types.submodule ({ config, ... }: {
       type = types.str;
       description = "Repository name";
     };
+    # For remote repository
     url = mkOption {
       type = types.nullOr types.str;
       description = "Repository URL";
@@ -24,6 +25,7 @@ types.submodule ({ config, ... }: {
       description = "Repository root.json";
       default = null;
     };
+    # For local no-index repository
     packages = mkOption {
       type = types.nullOr (types.listOf types.path);
       description = "Packages or paths for local no-index repository.";
