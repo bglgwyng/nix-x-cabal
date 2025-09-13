@@ -1,6 +1,8 @@
-{ lib, pkgs, cabal }:
+{ lib, pkgs, generate-noindex-cache, generate-secure-repo-index-cache }:
 let
   inherit (lib) mkOption types;
+  repository = import ./repository.nix { inherit lib pkgs; };
+  generate-noindex-repository = import ../lib/generate-noindex-repository.nix { inherit pkgs lib generate-noindex-cache; };
 in
 types.submoduleWith {
   modules = [
@@ -10,14 +12,29 @@ types.submoduleWith {
           type = types.path;
           description = "Root directory of the Haskell project. cabal.project must be in this directory.";
         };
+        repositories = mkOption {
+          type = types.attrsOf repository;
+          description = "Repository configurations";
+          default = { };
+        };
+        extra-cabal-config = mkOption {
+          type = types.raw;
+          description = "Cabal";
+          default = "";
+        };
         haskellPackages = mkOption {
-          type = types.lazyAttrsOf types.raw;
-          description = "Haskell package set to use";
+          type = types.raw;
+          description = "Nixpkgs Haskell packages";
           default = pkgs.haskellPackages;
         };
-        generate-plan-json = mkOption {
-          type = types.raw;
-          description = "App to generate plan.json for this project";
+        cabal-config = mkOption {
+          type = types.path;
+          description = "Path to cabal config";
+          readOnly = true;
+        };
+        cabal-dir = mkOption {
+          type = types.package;
+          description = "Cabal dir";
           readOnly = true;
         };
         packages = mkOption {
@@ -40,19 +57,22 @@ types.submoduleWith {
           description = "Path to plan.json";
           readOnly = true;
         };
-        cabal-install = mkOption {
-          type = types.package;
-          description = "Cabal";
-        };
         ghc = mkOption {
           type = types.package;
           description = "GHC";
+          readOnly = true;
+        };
+        cabal-install = mkOption {
+          type = types.package;
+          description = "Wrapped cabal-install with CABAL_DIR and CABAL_CONFIG";
           readOnly = true;
         };
       };
     }
     ({ config, ... }:
       let
+        secure-remote-repositories = (builtins.filter (repository: repository.url != null) (builtins.attrValues config.repositories));
+        noindex-repositories = (builtins.filter (repository: repository.packages != null) (builtins.attrValues config.repositories));
         packages = import ../lib/packages-from-plan-json.nix {
           inherit pkgs;
           haskellPackages = config.haskellPackages;
@@ -66,6 +86,38 @@ types.submoduleWith {
       in
       {
         config = {
+          cabal-dir = pkgs.callPackage ../lib/generate-cabal-dir.nix {
+            inherit secure-remote-repositories generate-secure-repo-index-cache;
+          };
+          cabal-config = pkgs.writeText "cabal-config" (
+            lib.concatStringsSep "\n" (
+              map
+                (repository: ''
+                  repository ${repository.name}
+                    url: ${repository.url}
+                '')
+                secure-remote-repositories
+              ++
+              map
+                (repository: ''
+                  repository ${repository.name}
+                    url: file+noindex://${generate-noindex-repository repository}
+                '')
+                noindex-repositories
+              ++ [ "with-compiler: ${config.haskellPackages.ghc}/bin/ghc" ]
+              ++ (lib.optional (config.extra-cabal-config != "") config.extra-cabal-config)
+            )
+          );
+          cabal-install = pkgs.symlinkJoin {
+            name = "cabal-install-wrapped";
+            paths = [ config.haskellPackages.cabal-install ];
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            postBuild = ''
+              wrapProgram $out/bin/cabal \
+                --set CABAL_CONFIG ${config.cabal-config} \
+                --set CABAL_DIR "${config.cabal-dir}"
+            '';
+          };
           plan-json = pkgs.stdenv.mkDerivation {
             name = "plan.json";
             src = config.root;

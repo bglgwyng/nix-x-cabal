@@ -11,21 +11,12 @@ in
       (
         let
           inherit (nix-x-cabal-utils.packages.${system}) generate-noindex-cache generate-secure-repo-index-cache;
-          cabal = builtins.import ./modules/cabal.nix {
-            inherit lib pkgs;
-            inherit nix-x-cabal-utils;
-            inherit generate-secure-repo-index-cache;
-            inherit generate-noindex-cache;
+          haskell-project = import ./modules/haskell-project.nix {
+            inherit lib pkgs generate-secure-repo-index-cache generate-noindex-cache;
           };
-          haskell-project = import ./modules/haskell-project.nix { inherit lib pkgs cabal; };
         in
         {
           options = {
-            cabals = lib.mkOption {
-              type = lib.types.attrsOf cabal;
-              description = "Cabals";
-              default = { };
-            };
             haskell-projects = lib.mkOption {
               type = lib.types.attrsOf haskell-project;
               description = "Haskell projects";
