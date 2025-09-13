@@ -28,7 +28,7 @@ let
   };
 in
 pkgs.stdenv.mkDerivation {
-  name = "example";
+  name = "cabal-dir";
   buildInputs = [ pkgs.cabal-install pkgs.cacert ];
   buildCommand = ''
     mkdir -p $out/packages
