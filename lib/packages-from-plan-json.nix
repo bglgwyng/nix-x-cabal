@@ -4,7 +4,7 @@ let
   install-plan = plan-json.install-plan;
   configured-components = builtins.filter (pkg: pkg.type == "configured") install-plan;
   components-by-id = builtins.listToAttrs (map (plan: { name = plan.id; value = plan; }) configured-components);
-  package-srcs = mapAttrs
+  package-srcs = builtins.mapAttrs
     (name: components:
       let
         the-component = builtins.head components;
@@ -77,7 +77,7 @@ let
         haskell.lib.dontCheck
         (haskell.lib.compose.setBuildTargets (extract-build-targets components))
       ];
-  overrided-packages = mapAttrs override-haskell-packages-in-plan package-srcs;
+  overrided-packages = builtins.mapAttrs override-haskell-packages-in-plan package-srcs;
   global-packages = lib.filterAttrs (name: _: !package-srcs.${name}.is-local) overrided-packages;
   local-packages = lib.filterAttrs (name: _: package-srcs.${name}.is-local) overrided-packages;
 in
