@@ -10,6 +10,10 @@ types.submodule ({ config, ... }: {
       description = "Repository URL";
       default = null;
     };
+    type = mkOption {
+      type = types.enum [ "secure" "no-index" ];
+      description = "Repository type";
+    };
     index = mkOption {
       type = types.nullOr types.path;
       description = "Repository 01-index.tar.gz";
@@ -26,6 +30,15 @@ types.submodule ({ config, ... }: {
       description = "Packages or paths for local no-index repository.";
       default = null;
     };
+  };
+  config = {
+    type =
+      lib.throwIf (config.url == null && config.packages == null) "Repository must have either url or packages specified"
+        (lib.throwIf (config.url != null && config.packages != null) "Repository cannot have both url and packages specified"
+          (if config.url != null then
+            "secure"
+          else
+            "no-index"));
   };
 })
 

@@ -1,7 +1,7 @@
 # Repository utility functions
 { lib, pkgs, generate-noindex-cache }:
 repository:
-assert repository.packages != null;
+assert repository.type != "noidnex";
 let
   inherit (repository) name packages;
   zip-to-tar-gz = src: pkgs.runCommand "idk.tar.gz" { } ''
