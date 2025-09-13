@@ -33,10 +33,6 @@ types.submoduleWith {
           description = "Cabal dir";
           readOnly = true;
         };
-        cabal-dir-sha256 = mkOption {
-          type = types.str;
-          description = "SHA256 of cabal dir";
-        };
         cabal-install = mkOption {
           type = types.package;
           description = "Wrapped cabal-install with CABAL_DIR and CABAL_CONFIG";
