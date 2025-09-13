@@ -74,6 +74,7 @@ let
     lib.pipe
       ((haskellPackages.callCabal2nix name src overrides))
       [
+        # TODO: remove this
         haskell.lib.dontCheck
         (haskell.lib.compose.setBuildTargets (extract-build-targets components))
       ];
