@@ -32,6 +32,11 @@ types.submoduleWith {
           description = "Extra build inputs";
           default = [ ];
         };
+        packages-overlays = mkOption {
+          type = types.listOf (types.functionTo (types.functionTo types.attrs));
+          description = "Overlays for packages";
+          default = [ ];
+        };
         cabal-config = mkOption {
           type = types.path;
           description = "Path to cabal config";
@@ -84,6 +89,7 @@ types.submoduleWith {
           haskellPackages = config.haskellPackages;
           # Read plan.json with proper dependency tracking
           plan-json = builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile (config.plan-json)));
+          overlays = config.packages-overlays;
           # `get-local-package-deps` is used to recover the dependencies of local packages that lost their dependencies via `unsafeDiscardStringContext`
           # `cabal-install` depends on local repositories, so that letting local packages depends on `cabal-install` is enough
           # TODO: let each local package depends on the exact package source derivation

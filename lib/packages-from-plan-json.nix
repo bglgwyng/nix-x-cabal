@@ -1,4 +1,4 @@
-{ pkgs, plan-json, haskellPackages ? pkgs.haskellPackages, get-local-package-deps }:
+{ pkgs, plan-json, haskellPackages, overlays, get-local-package-deps }:
 let
   inherit (pkgs) lib haskell;
   install-plan = plan-json.install-plan;
@@ -67,7 +67,7 @@ let
           extract-depends
           (builtins.concatMap (id: if components-by-id ? "${id}" then [ components-by-id.${id}.pkg-name ] else [ ]))
           lib.unique
-          (map (name: { name = name; value = overrided-packages.${name}; }))
+          (map (name: { name = name; value = overlayed-packages.${name}; }))
           builtins.listToAttrs
         ];
     in
@@ -78,7 +78,10 @@ let
         (haskell.lib.compose.setBuildTargets (extract-build-targets components))
       ];
   overrided-packages = builtins.mapAttrs override-haskell-packages-in-plan package-srcs;
-  global-packages = lib.filterAttrs (name: _: !package-srcs.${name}.is-local) overrided-packages;
-  local-packages = lib.filterAttrs (name: _: package-srcs.${name}.is-local) overrided-packages;
+  overlayed-packages =
+    let self = overrided-packages; in
+    lib.foldl' (super: overlay: super // (overlay self super)) overrided-packages overlays;
+  global-packages = lib.filterAttrs (name: _: !package-srcs.${name}.is-local) overlayed-packages;
+  local-packages = lib.filterAttrs (name: _: package-srcs.${name}.is-local) overlayed-packages;
 in
 { inherit global-packages local-packages; }
