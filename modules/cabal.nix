@@ -1,4 +1,4 @@
-{ lib, pkgs }:
+{ lib, pkgs, nix-x-cabal-utils, generate-secure-repo-index-cache, generate-noindex-cache }:
 let
   inherit (lib) mkOption types;
   repository = import ./repository.nix { inherit lib pkgs; };
@@ -17,7 +17,6 @@ types.submoduleWith {
           type = types.path;
           description = "Path to cabal config";
           readOnly = true;
-
         };
         repositories = mkOption {
           type = types.attrsOf repository;
@@ -53,13 +52,17 @@ types.submoduleWith {
     ({ config, ... }: {
       config = {
         cabal-dir = pkgs.callPackage ../lib/generate-cabal-dir.nix {
-          inherit (config) cabal-config;
-          sha256 = config.cabal-dir-sha256;
+          # inherit (config) cabal-config;
+          # sha256 = config.cabal-dir-sha256;
+          secure-remote-repositories = (builtins.filter (repository: repository.url != null) (builtins.attrValues config.repositories));
+          # local-repositories = (builtins.filter (repository: repository.packages != null) (builtins.attrValues config.repositories));
+          inherit generate-secure-repo-index-cache;
         };
+        # cabal-config = "${config.cabal-dir}/config";
         cabal-config = pkgs.writeText "cabal-config" (
           lib.concatStringsSep "\n" (
             lib.mapAttrsToList
-              (name: repostory: generate-repository { inherit pkgs lib repository; })
+              (name: repository: generate-repository { inherit pkgs lib repository generate-noindex-cache; })
               config.repositories
             ++ [ "with-compiler: ${config.ghc}/bin/ghc" ]
             ++ (lib.optional (config.extra-cabal-config != "") config.extra-cabal-config)
@@ -71,8 +74,8 @@ types.submoduleWith {
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postBuild = ''
             wrapProgram $out/bin/cabal \
-              --set CABAL_DIR "${config.cabal-dir}" \
-              --set CABAL_CONFIG "${config.cabal-config}"
+              --set CABAL_CONFIG ${config.cabal-config} \
+              --set CABAL_DIR "${config.cabal-dir}"
           '';
         };
       };

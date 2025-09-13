@@ -1,19 +1,39 @@
-{ pkgs, cabal-config, sha256 }:
+{ pkgs, secure-remote-repositories, generate-secure-repo-index-cache }:
+
+let
+  inherit (pkgs) lib;
+  unzip-tar-gz-to-tar = { name, src }: pkgs.stdenv.mkDerivation {
+    inherit name;
+    inherit src;
+    buildCommand = ''
+      gunzip -c $src > $out
+    '';
+  };
+  generate-package-dir = repo: pkgs.stdenv.mkDerivation {
+    name = "${repo.name}-package";
+    buildCommand = ''
+      mkdir -p $out
+      ${let
+        index-tar = unzip-tar-gz-to-tar {
+          name = "${repo.name}-01-index.tar";
+          src = repo.index;
+        };
+      in ''
+        ln -s ${index-tar} $out/01-index.tar
+        ln -s ${repo.root} $out/root.json
+        ls -al $out
+        ${generate-secure-repo-index-cache} ${repo.name} $out
+      ''}
+    '';
+  };
+in
 pkgs.stdenv.mkDerivation {
   name = "example";
   buildInputs = [ pkgs.cabal-install pkgs.cacert ];
   buildCommand = ''
-    export CABAL_CONFIG=${cabal-config}
+    mkdir -p $out/packages
+    cd $out/packages
 
-    export CABAL_DIR="$(mktemp -d)"
-    trap 'rm -rf -- "$CABAL_DIR"' EXIT
-
-    ${pkgs.cabal-install}/bin/cabal update
-
-    cp -r "$CABAL_DIR" $out
+    ${lib.concatMapStringsSep "\n" (repo: "ln -s ${generate-package-dir repo} ${repo.name}") secure-remote-repositories}
   '';
-
-  outputHash = "sha256-${sha256}";
-  outputHashMode = "recursive";
-  outputHashAlgo = "sha256";
 }

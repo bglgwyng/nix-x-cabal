@@ -14,6 +14,16 @@ types.submodule ({ config, ... }: {
       description = "Repository URL";
       default = null;
     };
+    index = mkOption {
+      type = types.nullOr types.path;
+      description = "Repository 01-index.tar.gz";
+      default = null;
+    };
+    root = mkOption {
+      type = types.nullOr types.path;
+      description = "Repository root.json";
+      default = null;
+    };
     packages = mkOption {
       type = types.nullOr (types.listOf local-package);
       description = "Packages or paths for local no-index repository.";

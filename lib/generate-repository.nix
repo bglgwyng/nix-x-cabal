@@ -1,5 +1,5 @@
 # Repository utility functions
-{ lib, pkgs, repository }:
+{ lib, pkgs, repository, generate-noindex-cache }:
 let
   url =
     if repository.url != null then
@@ -9,7 +9,7 @@ let
       let
         inherit (repository) name packages;
         # Compress each package as .tar.gz
-        compressedPackages = map
+        compressed-packages = map
           ({ name, version, src }:
             let name-version = "${name}-${version}";
             in
@@ -37,9 +37,9 @@ let
               mkdir -p $out
               cd $out
 
-              ${lib.concatMapStringsSep "\n" (p: "ln -s ${p.path} ${p.name}") compressedPackages}
-                
-              cabal update
+              ${lib.concatMapStringsSep "\n" (p: "ln -s ${p.path} ${p.name}") compressed-packages}
+
+              ${generate-noindex-cache} $out                
             '';
           };
       in
