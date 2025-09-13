@@ -1,4 +1,4 @@
-{ pkgs, plan-json, haskellPackages, overlays, get-local-package-deps }:
+{ pkgs, plan-json, haskellPackages, overlays, get-local-package-deps, get-cabal-metadata }:
 let
   inherit (pkgs) lib haskell;
   install-plan = plan-json.install-plan;
@@ -24,7 +24,7 @@ let
       {
         src = pkgs.callPackage ./plan-to-source.nix {
           plan = the-component;
-          inherit get-local-package-deps;
+          inherit get-local-package-deps get-cabal-metadata;
         };
         is-local = the-component.style == "local";
         components = components;

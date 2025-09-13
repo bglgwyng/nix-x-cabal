@@ -1,5 +1,6 @@
-{ plan, pkgs, get-local-package-deps }:
+{ pkgs, plan, get-local-package-deps, get-cabal-metadata }:
 let
+  inherit (pkgs) lib;
   inherit (plan) pkg-name pkg-version pkg-src-sha256 pkg-src;
 in
 if pkg-src.type == "repo-tar" then
@@ -9,12 +10,16 @@ if pkg-src.type == "repo-tar" then
         url = "${pkg-src.repo.uri}package/${pkg-name}-${pkg-version}/${pkg-name}-${pkg-version}.tar.gz";
         sha256 = pkg-src-sha256;
       });
-      # FIXME: the fetched metadata is the latest and there's no guarantee it matches the hash
-      metadata = (builtins.fetchurl {
-        url =
-          "${pkg-src.repo.uri}package/${pkg-name}-${pkg-version}/${pkg-name}.cabal";
-        sha256 = plan.pkg-cabal-sha256;
-      });
+      metadata =
+        let metadata-from-index = get-cabal-metadata { remote-url = pkg-src.repo.uri; name = pkg-name; version = pkg-version; }; in
+        assert (builtins.hashFile "sha256" metadata-from-index == plan.pkg-cabal-sha256);
+        metadata-from-index;
+      # we don't have a way to fetch the metadata from the index with the exact hash
+      # builtins.fetchurl {
+      #   url =
+      #     "${pkg-src.repo.uri}package/${pkg-name}-${pkg-version}/${pkg-name}.cabal";
+      #   sha256 = plan.pkg-cabal-sha256;
+      # };
     in
     pkgs.stdenv.mkDerivation {
       name = pkg-name;

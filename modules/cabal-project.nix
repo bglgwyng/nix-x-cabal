@@ -85,6 +85,32 @@ types.submoduleWith {
         secure-remote-repositories = builtins.filter (repository: repository.type == "secure") named-repositories;
         noindex-repositories = builtins.filter (repository: repository.type == "no-index") named-repositories;
 
+        secure-remote-repositories-by-url =
+          let
+            grouped-by-url = lib.groupBy (item: item.url) secure-remote-repositories;
+
+            duplicate-urls = builtins.attrNames (lib.filterAttrs (url: repos: builtins.length repos > 1) grouped-by-url);
+
+            # Throw error if duplicates exist
+          in
+          lib.throwIf (builtins.length duplicate-urls > 0)
+            "Duplicate repository URLs found: ${lib.concatStringsSep ", " duplicate-urls}. Each repository URL must be unique."
+            (builtins.mapAttrs (_: builtins.head) grouped-by-url);
+        get-cabal-metadata =
+          let
+            indices = lib.mapAttrs
+              (_: repo: pkgs.runCommand repo.name { } ''
+                mkdir $out
+                tar -xzf ${repo.index} -C $out
+              '')
+              secure-remote-repositories-by-url;
+          in
+          { remote-url, name, version }:
+          "${indices.${remote-url}}/${name}/${version}/${name}.cabal";
+        cabal-metadata-index = import ../lib/make-cabal-metadata-index.nix {
+          inherit pkgs lib secure-remote-repositories;
+        };
+
         packages = import ../lib/packages-from-plan-json.nix {
           inherit pkgs;
           haskellPackages = config.haskellPackages;
@@ -95,6 +121,7 @@ types.submoduleWith {
           # `cabal-install` depends on local repositories, so that letting local packages depends on `cabal-install` is enough
           # TODO: let each local package depends on the exact package source derivation
           get-local-package-deps = (name: version: [ config.cabal-install ]);
+          inherit get-cabal-metadata;
         };
       in
       {
