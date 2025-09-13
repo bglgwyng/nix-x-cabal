@@ -129,7 +129,8 @@ types.submoduleWith {
               cabal build all \
                 --project-dir=$src \
                 --dry-run \
-                --builddir=$MYTMP
+                --builddir=$MYTMP \
+                --offline
 
               cp $MYTMP/cache/plan.json $out
             '';
