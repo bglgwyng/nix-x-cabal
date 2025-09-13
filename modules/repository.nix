@@ -25,7 +25,7 @@ types.submodule ({ config, ... }: {
       default = null;
     };
     packages = mkOption {
-      type = types.nullOr (types.listOf local-package);
+      type = types.nullOr (types.listOf types.path);
       description = "Packages or paths for local no-index repository.";
       default = null;
     };
