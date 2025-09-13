@@ -3,8 +3,8 @@ let
   inherit (pkgs) lib haskell;
   install-plan = plan-json.install-plan;
   configured-components = builtins.filter (pkg: pkg.type == "configured") install-plan;
-  components-by-id = builtins.listToAttrs (builtins.map (plan: { name = plan.id; value = plan; }) configured-components);
-  package-srcs = builtins.mapAttrs
+  components-by-id = builtins.listToAttrs (map (plan: { name = plan.id; value = plan; }) configured-components);
+  package-srcs = mapAttrs
     (name: components:
       let
         the-component = builtins.head components;
@@ -15,11 +15,11 @@ let
       in
       assert (
         if pkg-src.type == "repo-tar" then
-          all-equal (builtins.map (plan: plan.pkg-src-sha256) components)
-          && all-equal (builtins.map (plan: plan.pkg-cabal-sha256) components)
+          all-equal (map (plan: plan.pkg-src-sha256) components)
+          && all-equal (map (plan: plan.pkg-cabal-sha256) components)
         else
           assert pkg-src.type == "local";
-          all-equal (builtins.map (plan: pkg-src.path) components)
+          all-equal (map (plan: pkg-src.path) components)
       );
       {
         src = pkgs.callPackage ./plan-to-source.nix {
@@ -32,7 +32,7 @@ let
     )
     (builtins.groupBy (plan: plan.pkg-name) configured-components);
   extract-depends = components:
-    let self-component-ids = builtins.map (plan: plan.id) components;
+    let self-component-ids = map (plan: plan.id) components;
     in
     # for example, constraints-extras:exe:readme depends on constraints-extras:lib. this filter removes it.
     builtins.filter (id: !builtins.elem id self-component-ids)
@@ -49,7 +49,7 @@ let
   extract-build-targets = components:
     (builtins.concatMap
       (component:
-        builtins.map
+        map
           (component-name: if component-name == "lib" then "lib:${component.pkg-name}" else component-name)
           (if component ? "component-name" then
             [ component.component-name ]
@@ -67,7 +67,7 @@ let
           extract-depends
           (builtins.concatMap (id: if components-by-id ? "${id}" then [ components-by-id.${id}.pkg-name ] else [ ]))
           lib.unique
-          (builtins.map (name: { name = name; value = overrided-packages.${name}; }))
+          (map (name: { name = name; value = overrided-packages.${name}; }))
           builtins.listToAttrs
         ];
     in
@@ -77,7 +77,7 @@ let
         haskell.lib.dontCheck
         (haskell.lib.compose.setBuildTargets (extract-build-targets components))
       ];
-  overrided-packages = builtins.mapAttrs override-haskell-packages-in-plan package-srcs;
+  overrided-packages = mapAttrs override-haskell-packages-in-plan package-srcs;
   global-packages = lib.filterAttrs (name: _: !package-srcs.${name}.is-local) overrided-packages;
   local-packages = lib.filterAttrs (name: _: package-srcs.${name}.is-local) overrided-packages;
 in
