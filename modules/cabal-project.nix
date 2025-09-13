@@ -27,6 +27,11 @@ types.submoduleWith {
           description = "Nixpkgs Haskell packages";
           default = pkgs.haskellPackages;
         };
+        extra-buildInputs = mkOption {
+          type = types.listOf types.package;
+          description = "Extra build inputs";
+          default = [ ];
+        };
         cabal-config = mkOption {
           type = types.path;
           description = "Path to cabal config";
@@ -109,7 +114,7 @@ types.submoduleWith {
             )
           );
           cabal-install = pkgs.symlinkJoin {
-            name = "cabal-install-wrapped";
+            name = "cabal-install";
             paths = [ config.haskellPackages.cabal-install ];
             nativeBuildInputs = [ pkgs.makeWrapper ];
             postBuild = ''
@@ -121,12 +126,12 @@ types.submoduleWith {
           plan-json = pkgs.stdenv.mkDerivation {
             name = "plan.json";
             src = config.root;
-            buildInputs = [ config.cabal-install ];
+            buildInputs = config.extra-buildInputs;
             buildCommand = ''
               MYTMP="$(mktemp -d)"
               trap 'rm -rf -- "$MYTMP"' EXIT
-
-              cabal build all \
+              
+              ${config.cabal-install}/bin/cabal build all \
                 --project-dir=$src \
                 --dry-run \
                 --builddir=$MYTMP \
