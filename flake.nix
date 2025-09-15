@@ -1,5 +1,5 @@
 {
-  description = "Haskell packages from plan.json";
+  description = "Blessed shipping between Nix and Cabal";
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
