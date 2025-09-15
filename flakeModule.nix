@@ -1,5 +1,5 @@
 { nix-x-cabal-utils }:
-rest@{ lib, flake-parts-lib, ... }:
+{ lib, flake-parts-lib, ... }:
 let
   inherit (flake-parts-lib) mkPerSystemOption;
   inherit (lib) mkOption types;
@@ -7,7 +7,7 @@ in
 {
   options = {
     perSystem = mkPerSystemOption (
-      rest@{ config, pkgs, system, inputs', ... }:
+      { config, pkgs, system, inputs', ... }:
       (
         let
           inherit (nix-x-cabal-utils.packages.${system}) generate-noindex-cache generate-secure-repo-index-cache;
