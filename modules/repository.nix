@@ -11,7 +11,7 @@ types.submodule ({ config, ... }: {
       default = null;
     };
     type = mkOption {
-      type = types.enum [ "secure" "no-index" ];
+      type = types.enum [ "remote-secure" "local-no-index" ];
       description = "Repository type";
     };
     index = mkOption {
@@ -36,9 +36,9 @@ types.submodule ({ config, ... }: {
       lib.throwIf (config.url == null && config.packages == null) "Repository must have either url or packages specified"
         (lib.throwIf (config.url != null && config.packages != null) "Repository cannot have both url and packages specified"
           (if config.url != null then
-            "secure"
+            "remote-secure"
           else
-            "no-index"));
+            "local-no-index"));
   };
 })
 

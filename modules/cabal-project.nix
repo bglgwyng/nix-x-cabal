@@ -82,8 +82,8 @@ types.submoduleWith {
     ({ config, ... }:
       let
         named-repositories = lib.mapAttrsToList (name: repository: repository // { inherit name; }) config.repositories;
-        secure-remote-repositories = builtins.filter (repository: repository.type == "secure") named-repositories;
-        noindex-repositories = builtins.filter (repository: repository.type == "no-index") named-repositories;
+        secure-remote-repositories = builtins.filter (repository: repository.type == "remote-secure") named-repositories;
+        noindex-repositories = builtins.filter (repository: repository.type == "local-no-index") named-repositories;
 
         secure-remote-repositories-by-url =
           let
