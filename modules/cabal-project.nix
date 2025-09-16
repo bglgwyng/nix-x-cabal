@@ -1,8 +1,8 @@
-{ lib, pkgs, generate-noindex-cache, generate-secure-repo-index-cache }:
+{ lib, pkgs, generate-no-index-cache, generate-secure-repo-index-cache }:
 let
   inherit (lib) mkOption types;
   repository = import ./repository.nix { inherit lib pkgs; };
-  make-noindex-repository = import ../lib/make-noindex-repository.nix { inherit pkgs lib generate-noindex-cache; };
+  make-noindex-repository = import ../lib/make-noindex-repository.nix { inherit pkgs lib generate-no-index-cache; };
 in
 types.submoduleWith {
   modules = [

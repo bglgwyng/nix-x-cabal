@@ -10,9 +10,9 @@ in
       { config, pkgs, system, inputs', ... }:
       (
         let
-          inherit (nix-x-cabal-utils.packages.${system}) generate-noindex-cache generate-secure-repo-index-cache;
+          inherit (nix-x-cabal-utils.packages.${system}) generate-no-index-cache generate-secure-repo-index-cache;
           cabal-project = import ./modules/cabal-project.nix {
-            inherit lib pkgs generate-secure-repo-index-cache generate-noindex-cache;
+            inherit lib pkgs generate-secure-repo-index-cache generate-no-index-cache;
           };
         in
         {

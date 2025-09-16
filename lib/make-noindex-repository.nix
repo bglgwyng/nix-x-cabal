@@ -1,5 +1,5 @@
 # Repository utility functions
-{ lib, pkgs, generate-noindex-cache }:
+{ lib, pkgs, generate-no-index-cache }:
 repository:
 assert repository.type != "noidnex";
 let
@@ -29,6 +29,6 @@ pkgs.stdenv.mkDerivation {
       ln -s ${zip-to-tar-gz src} $name-$version.tar.gz
       '') packages}
 
-    ${generate-noindex-cache} $out                
+    ${generate-no-index-cache} $out                
   '';
 }

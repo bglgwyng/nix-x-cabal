@@ -503,11 +503,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1757740895,
-        "narHash": "sha256-Z+lCg5slitKU/ToUHubYejpAqn5YT5j6JDkhjT5XxLY=",
+        "lastModified": 1757993579,
+        "narHash": "sha256-MYOtrmXpsX9UUG61/4v3dWLwPL7umJiFNCxDJk1Lq0g=",
         "owner": "bglgwyng",
         "repo": "nix-x-cabal-utils",
-        "rev": "925442d5a40d30cb09c658e5df8673805fb2d25e",
+        "rev": "6c0ff2e007af21bca869143e7f6091cf5a0f7d4c",
         "type": "github"
       },
       "original": {
