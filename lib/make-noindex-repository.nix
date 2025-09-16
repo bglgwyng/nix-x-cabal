@@ -23,8 +23,8 @@ pkgs.stdenv.mkDerivation {
     cd $out
 
     ${lib.concatMapStringsSep "\n" (src: ''
-      name=$(sed -n 's/^name: *//p' ${src}/*.cabal | head -1)
-      version=$(sed -n 's/^version: *//p' ${src}/*.cabal | head -1)
+      name=$(sed -n 's/^[nN]ame: *//p' ${src}/*.cabal | head -1)
+      version=$(sed -n 's/^[vV]ersion: *//p' ${src}/*.cabal | head -1)
 
       ln -s ${zip-to-tar-gz src} $name-$version.tar.gz
       '') packages}
