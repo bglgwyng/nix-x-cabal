@@ -5,8 +5,8 @@ assert repository.type != "noidnex";
 let
   inherit (repository) name packages;
   zip-to-tar-gz = src: pkgs.runCommand "idk.tar.gz" { } ''
-    name=$(sed -n 's/^name: *//p' ${src}/*.cabal | head -1)
-    version=$(sed -n 's/^version: *//p' ${src}/*.cabal | head -1)
+    name=$(sed -n 's/^[nN]ame: *//p' ${src}/*.cabal | head -1)
+    version=$(sed -n 's/^[vV]ersion: *//p' ${src}/*.cabal | head -1)
 
     mkdir $name-$version
     cp -r ${src}/* $name-$version/
