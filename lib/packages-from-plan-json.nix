@@ -80,7 +80,7 @@ let
       ];
   overrided-packages = builtins.mapAttrs override-haskell-packages-in-plan package-srcs;
   overlayed-packages =
-    let self = overrided-packages; in
+    let self = overlayed-packages; in
     lib.foldl' (super: overlay: super // (overlay self super)) overrided-packages overlays;
   global-packages = lib.filterAttrs (name: _: !package-srcs.${name}.is-local) overlayed-packages;
   local-packages = lib.filterAttrs (name: _: package-srcs.${name}.is-local) overlayed-packages;
